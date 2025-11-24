@@ -112,3 +112,17 @@ export default {
     typography,
   ],
 } satisfies Config;
+// tailwind.config.js
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        cosmic: '#3A1557',
+        plum: '#60267B',
+        orchid: '#835B99',
+        crimson: '#751D3B',
+        lavender: '#CEBBD2',
+      },
+    },
+  },
+};
