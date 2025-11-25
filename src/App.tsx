@@ -12,6 +12,7 @@ import NotFound from "./pages/NotFound";
 import SignUp from "./pages/SignUp";      // ✅ ADD THIS IMPORT
 import Subscribe from "./pages/Subscribe";
 import Dashboard from "./pages/Dashboard";
+import SignIn from "./pages/SignIn";
 
 const queryClient = new QueryClient();
 
@@ -27,7 +28,8 @@ const App = () => (
             <Route path="/" element={<Landing />} />
 
             {/* Signup page */}
-            <Route path="/signup" element={<SignUp />} />   {/* ✅ ADD THIS ROUTE */}
+            <Route path="/signup" element={<SignUp />} /> {/* ✅ ADD THIS ROUTE */}
+             <Route path="/signin" element={<SignIn />} />
             <Route path="/subscribe" element={<Subscribe />} />
             {/* Dream chat (old main page) */}
             <Route path="/chat" element={<Index />} />
