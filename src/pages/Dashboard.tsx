@@ -1,12 +1,11 @@
 // src/pages/Dashboard.tsx
-import Index from "./Index"; // existing chat page
-
 import { useEffect, useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import Index from "./Index"; // existing chat page
 
 type Tab = "chat" | "history" | "profile";
 
@@ -27,8 +26,7 @@ export default function Dashboard() {
     const loadUser = async () => {
       const { data, error } = await supabase.auth.getUser();
       if (error || !data.user) {
-        // Not logged in → send back to landing/signup
-        navigate("/signup");
+        navigate("/signin");
         return;
       }
 
@@ -88,7 +86,6 @@ export default function Dashboard() {
   };
 
   const handleDeactivate = () => {
-    // Placeholder: later you can mark user as deactivated in your profiles table
     alert(
       "Deactivation flow goes here (e.g., flag account in your profiles table)."
     );
@@ -103,123 +100,71 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-crimson via-plum to-cosmic text-white flex">
-      {/* Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 border-r border-white/10 bg-black/20 backdrop-blur p-5 gap-6">
+    <div className="min-h-screen bg-gradient-to-b from-crimson via-plum to-cosmic text-white px-3 py-4 md:px-6 md:py-6">
+      {/* Top bar */}
+      <header className="max-w-5xl mx-auto flex items-center justify-between gap-3 mb-4">
         <div>
           <p className="text-sm font-semibold">
             <span className="text-lavender">i</span>Dreampt
           </p>
-          <p className="text-xs text-lavender/80 mt-1">
+          <p className="text-xs text-lavender/80">
             Welcome{displayName ? `, ${displayName}` : ""}.
           </p>
           {userEmail && (
-            <p className="text-[11px] text-lavender/60 mt-1">{userEmail}</p>
+            <p className="text-[11px] text-lavender/60 mt-0.5">
+              {userEmail}
+            </p>
           )}
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="border-lavender/70 text-lavender hover:bg-lavender/10"
+          onClick={handleLogout}
+        >
+          Log out
+        </Button>
+      </header>
 
-        <nav className="flex flex-col gap-2 text-sm">
+      {/* Card container */}
+      <div className="max-w-5xl mx-auto bg-black/30 border border-white/10 rounded-3xl shadow-xl backdrop-blur-md p-3 md:p-5">
+        {/* Tabs (mobile-friendly) */}
+        <div className="flex gap-2 mb-4 overflow-x-auto text-xs md:text-sm">
           <button
             onClick={() => setTab("chat")}
-            className={`text-left px-3 py-2 rounded-xl transition ${
+            className={`flex-1 min-w-[90px] px-3 py-2 rounded-full transition ${
               tab === "chat"
-                ? "bg-lavender text-cosmic"
-                : "hover:bg-white/5 text-lavender/90"
+                ? "bg-lavender text-cosmic font-semibold"
+                : "bg-white/5 text-lavender/90 hover:bg-white/10"
             }`}
           >
             🌙 Dream Chat
           </button>
           <button
             onClick={() => setTab("history")}
-            className={`text-left px-3 py-2 rounded-xl transition ${
+            className={`flex-1 min-w-[90px] px-3 py-2 rounded-full transition ${
               tab === "history"
-                ? "bg-lavender text-cosmic"
-                : "hover:bg-white/5 text-lavender/90"
+                ? "bg-lavender text-cosmic font-semibold"
+                : "bg-white/5 text-lavender/90 hover:bg-white/10"
             }`}
           >
-            📜 Dream History
+            📜 History
           </button>
           <button
             onClick={() => setTab("profile")}
-            className={`text-left px-3 py-2 rounded-xl transition ${
+            className={`flex-1 min-w-[90px] px-3 py-2 rounded-full transition ${
               tab === "profile"
-                ? "bg-lavender text-cosmic"
-                : "hover:bg-white/5 text-lavender/90"
+                ? "bg-lavender text-cosmic font-semibold"
+                : "bg-white/5 text-lavender/90 hover:bg-white/10"
             }`}
           >
-            ⚙️ Profile & Settings
-          </button>
-        </nav>
-
-        <div className="mt-auto">
-          <Button
-            variant="outline"
-            className="w-full border-lavender/70 text-lavender hover:bg-lavender/10"
-            onClick={handleLogout}
-          >
-            Log out
-          </Button>
-        </div>
-      </aside>
-
-      {/* Main area */}
-      <main className="flex-1 p-4 md:p-8">
-        <div className="md:hidden mb-4 flex items-center justify-between">
-          <div>
-            <p className="text-sm font-semibold">
-              <span className="text-lavender">i</span>Dreampt Dashboard
-            </p>
-            {userEmail && (
-              <p className="text-[11px] text-lavender/70">{userEmail}</p>
-            )}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="border-lavender/70 text-lavender"
-            onClick={handleLogout}
-          >
-            Log out
-          </Button>
-        </div>
-
-        {/* Tab selector for mobile */}
-        <div className="md:hidden mb-4 flex gap-2 text-xs">
-          <button
-            onClick={() => setTab("chat")}
-            className={`flex-1 px-3 py-2 rounded-full ${
-              tab === "chat"
-                ? "bg-lavender text-cosmic"
-                : "bg-white/10 text-lavender/90"
-            }`}
-          >
-            Dream Chat
-          </button>
-          <button
-            onClick={() => setTab("history")}
-            className={`flex-1 px-3 py-2 rounded-full ${
-              tab === "history"
-                ? "bg-lavender text-cosmic"
-                : "bg-white/10 text-lavender/90"
-            }`}
-          >
-            History
-          </button>
-          <button
-            onClick={() => setTab("profile")}
-            className={`flex-1 px-3 py-2 rounded-full ${
-              tab === "profile"
-                ? "bg-lavender text-cosmic"
-                : "bg-white/10 text-lavender/90"
-            }`}
-          >
-            Profile
+            ⚙️ Profile
           </button>
         </div>
 
-        {/* Messages */}
+        {/* Optional messages */}
         {(errorMsg || successMsg) && (
-          <div className="mb-4 text-xs">
+          <div className="mb-3 text-xs">
             {errorMsg && (
               <p className="text-red-300 mb-1">Error: {errorMsg}</p>
             )}
@@ -229,118 +174,136 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* CONTENT TABS */}
-       {tab === "chat" && (
-  <div className="bg-black/20 border border-white/10 rounded-3xl p-2 md:p-3 min-h-[60vh] overflow-hidden">
-    <Index />
-  </div>
-)}
+        {/* CONTENT AREA */}
+        <div className="mt-1">
+          {/* CHAT TAB */}
+          {tab === "chat" && (
+            <section className="rounded-2xl border border-white/10 bg-black/40 p-2 md:p-3 min-h-[60vh] max-h-[75vh] overflow-hidden">
+              <div className="mb-2 md:mb-3">
+                <h1 className="text-base md:text-lg font-semibold">
+                  🌙 Dream Chat
+                </h1>
+                <p className="text-[11px] md:text-xs text-lavender/80">
+                  Share your dream and let iDreampt interpret it using
+                  psychology, spirituality, astrology, and symbolic analysis.
+                </p>
+              </div>
+              <div className="h-[calc(100%-2.5rem)] md:h-[calc(100%-3rem)] overflow-auto rounded-xl">
+                <Index />
+              </div>
+            </section>
+          )}
 
-
-        {tab === "history" && (
-          <section className="bg-black/20 border border-white/10 rounded-3xl p-4 md:p-6 min-h-[60vh]">
-            <h1 className="text-xl font-semibold mb-2">
-              📜 Dream History & Results
-            </h1>
-            <p className="text-xs text-lavender/80 mb-4">
-              Later this will pull from a <code>dreams</code> table in Supabase
-              and show your past dreams + interpretations. For now this is a
-              placeholder.
-            </p>
-            <div className="rounded-2xl border border-dashed border-white/20 bg-black/30 h-[50vh] flex items-center justify-center text-xs text-lavender/70">
-              No dream history yet. Once we store each dream in Supabase, they’ll
-              appear here.
-            </div>
-          </section>
-        )}
-
-        {tab === "profile" && (
-          <section className="grid md:grid-cols-2 gap-6">
-            {/* Profile info */}
-            <div className="bg-black/20 border border-white/10 rounded-3xl p-4 md:p-6">
-              <h1 className="text-lg font-semibold mb-3">
-                ⚙️ Profile
+          {/* HISTORY TAB */}
+          {tab === "history" && (
+            <section className="rounded-2xl border border-white/10 bg-black/40 p-4 md:p-6 min-h-[50vh]">
+              <h1 className="text-base md:text-lg font-semibold mb-2">
+                📜 Dream History & Results
               </h1>
-              <form onSubmit={handleProfileSave} className="space-y-3">
-                <div className="space-y-1">
-                  <Label htmlFor="displayName">Display name</Label>
-                  <Input
-                    id="displayName"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="How you want iDreampt to address you"
-                  />
-                </div>
+              <p className="text-[11px] md:text-xs text-lavender/80 mb-4">
+                Soon, every dream you interpret will be saved here with its
+                insight and themes. You’ll be able to scroll back through your
+                “night stories” and see patterns in your waking life.
+              </p>
+              <div className="rounded-2xl border border-dashed border-white/20 bg-black/30 min-h-[40vh] flex items-center justify-center text-xs text-lavender/70 text-center px-6">
+                No dream history yet. Once we store each dream in Supabase,
+                they’ll appear here with dates, summaries, and key symbols.
+              </div>
+            </section>
+          )}
 
-                {userEmail && (
+          {/* PROFILE TAB */}
+          {tab === "profile" && (
+            <section className="grid md:grid-cols-2 gap-4 md:gap-6">
+              {/* Profile info */}
+              <div className="rounded-2xl border border-white/10 bg-black/40 p-4 md:p-5">
+                <h1 className="text-base md:text-lg font-semibold mb-3">
+                  ⚙️ Profile
+                </h1>
+                <form onSubmit={handleProfileSave} className="space-y-3">
                   <div className="space-y-1">
-                    <Label>Email</Label>
-                    <p className="text-xs text-lavender/80">{userEmail}</p>
-                  </div>
-                )}
-
-                <Button
-                  type="submit"
-                  disabled={profileSaving}
-                  className="mt-2"
-                >
-                  {profileSaving ? "Saving…" : "Save profile"}
-                </Button>
-              </form>
-            </div>
-
-            {/* Password & deactivate */}
-            <div className="bg-black/20 border border-white/10 rounded-3xl p-4 md:p-6 space-y-6">
-              <div>
-                <h2 className="text-sm font-semibold mb-2">
-                  Change password
-                </h2>
-                <form
-                  onSubmit={handlePasswordChange}
-                  className="space-y-3"
-                >
-                  <div className="space-y-1">
-                    <Label htmlFor="newPassword">New password</Label>
+                    <Label htmlFor="displayName">Display name</Label>
                     <Input
-                      id="newPassword"
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      minLength={6}
+                      id="displayName"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      placeholder="How you want iDreampt to address you"
                     />
                   </div>
+
+                  {userEmail && (
+                    <div className="space-y-1">
+                      <Label>Email</Label>
+                      <p className="text-xs text-lavender/80">
+                        {userEmail}
+                      </p>
+                    </div>
+                  )}
+
                   <Button
                     type="submit"
-                    size="sm"
-                    disabled={passwordSaving || !newPassword}
+                    disabled={profileSaving}
+                    className="mt-2"
                   >
-                    {passwordSaving ? "Updating…" : "Update password"}
+                    {profileSaving ? "Saving…" : "Save profile"}
                   </Button>
                 </form>
               </div>
 
-              <div className="border-t border-white/10 pt-4">
-                <h2 className="text-sm font-semibold mb-2 text-red-300">
-                  Deactivate account
-                </h2>
-                <p className="text-[11px] text-lavender/80 mb-3">
-                  This will log you out and mark your account as inactive. Later
-                  we can wire this to actually disable your subscription/user.
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-red-500/70 text-red-300 hover:bg-red-500/10"
-                  type="button"
-                  onClick={handleDeactivate}
-                >
-                  Deactivate account
-                </Button>
+              {/* Password & deactivate */}
+              <div className="rounded-2xl border border-white/10 bg-black/40 p-4 md:p-5 space-y-6">
+                <div>
+                  <h2 className="text-sm font-semibold mb-2">
+                    Change password
+                  </h2>
+                  <form
+                    onSubmit={handlePasswordChange}
+                    className="space-y-3"
+                  >
+                    <div className="space-y-1">
+                      <Label htmlFor="newPassword">New password</Label>
+                      <Input
+                        id="newPassword"
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        minLength={6}
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={passwordSaving || !newPassword}
+                    >
+                      {passwordSaving ? "Updating…" : "Update password"}
+                    </Button>
+                  </form>
+                </div>
+
+                <div className="border-t border-white/10 pt-4">
+                  <h2 className="text-sm font-semibold mb-2 text-red-300">
+                    Deactivate account
+                  </h2>
+                  <p className="text-[11px] text-lavender/80 mb-3">
+                    This will log you out and mark your account as inactive.
+                    Later we can wire this to actually disable your
+                    subscription/user.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-red-500/70 text-red-300 hover:bg-red-500/10"
+                    type="button"
+                    onClick={handleDeactivate}
+                  >
+                    Deactivate account
+                  </Button>
+                </div>
               </div>
-            </div>
-          </section>
-        )}
-      </main>
+            </section>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
