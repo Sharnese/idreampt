@@ -10,6 +10,7 @@ import Landing from "./pages/Landing";
 import Index from "./pages/Index";        // Chat page (for now)
 import NotFound from "./pages/NotFound";
 import SignUp from "./pages/SignUp";      // ✅ ADD THIS IMPORT
+import Subscribe from "./pages/Subscribe";
 
 const queryClient = new QueryClient();
 
