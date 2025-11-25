@@ -16,13 +16,19 @@ export default function SignUp() {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
 
     try {
-      const { error } = await supabase.auth.signUp({
+      console.log("Signing up with:", { email, password, plan });
+
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -30,12 +36,27 @@ export default function SignUp() {
         },
       });
 
-      if (error) throw error;
+      console.log("Supabase signUp response:", { data, error });
 
-      navigate(`/subscribe?plan=${plan}`);
-    } catch (err) {
+      if (error) {
+        setErrorMsg(error.message || "Unknown error from Supabase.");
+        return;
+      }
+
+      if (!data?.user) {
+        setErrorMsg("No user returned from Supabase. Check auth settings.");
+        return;
+      }
+
+      setSuccessMsg("Account created! Redirecting to subscription…");
+
+      // small delay so they can see the message
+      setTimeout(() => {
+        navigate(`/subscribe?plan=${plan}`);
+      }, 800);
+    } catch (err: any) {
       console.error("Sign up failed:", err);
-      alert("Error signing up. Please try again.");
+      setErrorMsg(err?.message || "Unexpected error. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -74,6 +95,7 @@ export default function SignUp() {
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
             />
           </div>
 
@@ -87,6 +109,7 @@ export default function SignUp() {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
             />
           </div>
 
@@ -102,6 +125,18 @@ export default function SignUp() {
               : "Continue to checkout →"}
           </Button>
         </form>
+
+        {/* Debug messages */}
+        {errorMsg && (
+          <p className="mt-3 text-xs text-red-500">
+            Error: {errorMsg}
+          </p>
+        )}
+        {successMsg && (
+          <p className="mt-3 text-xs text-emerald-400">
+            {successMsg}
+          </p>
+        )}
 
         <p className="mt-4 text-xs text-muted-foreground text-center">
           Already have an account?{" "}
