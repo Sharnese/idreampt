@@ -5,7 +5,6 @@ import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import Index from "./Index"; // your existing chat layout (which uses AppLayout internally)
 
 type Tab = "chat" | "history" | "profile";
 
@@ -161,7 +160,6 @@ export default function Dashboard() {
           </button>
         </div>
 
-        {/* Messages */}
         {(errorMsg || successMsg) && (
           <div className="mb-3 text-xs">
             {errorMsg && (
@@ -176,11 +174,22 @@ export default function Dashboard() {
 
       {/* Main content area */}
       <main className="flex-1 w-full max-w-5xl mx-auto px-3 md:px-6 pb-6">
-        {/* CHAT TAB – just render your existing app layout, no card */}
+        {/* CHAT TAB – just link out to the existing full-page chat */}
         {tab === "chat" && (
-          <div className="w-full">
-            <Index />
-          </div>
+          <section className="mt-3 rounded-2xl border border-white/10 bg-black/40 p-4 md:p-6">
+            <h1 className="text-base md:text-lg font-semibold mb-2">
+              🌙 Dream Chat
+            </h1>
+            <p className="text-[11px] md:text-xs text-lavender/80 mb-4">
+              Open your AI-powered dream interpreter to analyze a new dream.
+            </p>
+            <Button
+              onClick={() => navigate("/chat")}
+              className="mt-1"
+            >
+              Open Dream Chat
+            </Button>
+          </section>
         )}
 
         {/* HISTORY TAB */}
@@ -295,3 +304,4 @@ export default function Dashboard() {
     </div>
   );
 }
+
