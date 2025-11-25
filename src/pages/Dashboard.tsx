@@ -8,6 +8,25 @@ import { Label } from "@/components/ui/label";
 
 type Tab = "chat" | "history" | "profile";
 
+/** NEW: ensure there is a profile row for this user */
+async function ensureProfile(userId: string, email?: string | null) {
+  if (!userId) return;
+
+  const { error } = await supabase
+    .from("profiles")
+    .upsert(
+      {
+        id: userId,
+        email: email ?? null,
+      },
+      { onConflict: "id" }
+    );
+
+  if (error) {
+    console.error("Error ensuring profile:", error);
+  }
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("chat");
@@ -20,7 +39,7 @@ export default function Dashboard() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Load current user
+  // Load current user + ensure profile + load profile display_name
   useEffect(() => {
     const loadUser = async () => {
       const { data, error } = await supabase.auth.getUser();
@@ -29,10 +48,27 @@ export default function Dashboard() {
         return;
       }
 
-      setUserEmail(data.user.email ?? null);
-      setDisplayName(
-        (data.user.user_metadata as any)?.display_name ?? ""
-      );
+      const user = data.user;
+      setUserEmail(user.email ?? null);
+
+      // Make sure a profiles row exists
+      await ensureProfile(user.id, user.email);
+
+      // Load display_name from profiles table
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("display_name")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError) {
+        console.error("Error loading profile:", profileError);
+      } else if (profile?.display_name) {
+        setDisplayName(profile.display_name);
+      } else {
+        setDisplayName("");
+      }
+
       setLoadingUser(false);
     };
 
@@ -44,6 +80,7 @@ export default function Dashboard() {
     navigate("/");
   };
 
+  // Save profile info INTO profiles table
   const handleProfileSave = async (e: FormEvent) => {
     e.preventDefault();
     setProfileSaving(true);
@@ -51,12 +88,27 @@ export default function Dashboard() {
     setSuccessMsg(null);
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        data: { display_name: displayName },
-      });
+      const { data, error: userError } = await supabase.auth.getUser();
+      if (userError || !data.user) {
+        throw new Error("Not authenticated");
+      }
+
+      const user = data.user;
+
+      const { error } = await supabase.from("profiles").upsert(
+        {
+          id: user.id,
+          email: user.email ?? null,
+          display_name: displayName,
+        },
+        { onConflict: "id" }
+      );
+
       if (error) throw error;
+
       setSuccessMsg("Profile updated.");
     } catch (err: any) {
+      console.error("Error updating profile:", err);
       setErrorMsg(err?.message ?? "Could not update profile.");
     } finally {
       setProfileSaving(false);
@@ -174,7 +226,7 @@ export default function Dashboard() {
 
       {/* Main content area */}
       <main className="flex-1 w-full max-w-5xl mx-auto px-3 md:px-6 pb-6">
-        {/* CHAT TAB – just link out to the existing full-page chat */}
+        {/* CHAT TAB – currently still linking to /chat */}
         {tab === "chat" && (
           <section className="mt-3 rounded-2xl border border-white/10 bg-black/40 p-4 md:p-6">
             <h1 className="text-base md:text-lg font-semibold mb-2">
@@ -183,16 +235,13 @@ export default function Dashboard() {
             <p className="text-[11px] md:text-xs text-lavender/80 mb-4">
               Open your AI-powered dream interpreter to analyze a new dream.
             </p>
-            <Button
-              onClick={() => navigate("/chat")}
-              className="mt-1"
-            >
+            <Button onClick={() => navigate("/chat")} className="mt-1">
               Open Dream Chat
             </Button>
           </section>
         )}
 
-        {/* HISTORY TAB */}
+        {/* HISTORY TAB – will hook to dreams table next */}
         {tab === "history" && (
           <section className="mt-3 rounded-2xl border border-white/10 bg-black/40 p-4 md:p-6">
             <h1 className="text-base md:text-lg font-semibold mb-2">
@@ -304,4 +353,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
