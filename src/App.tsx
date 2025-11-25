@@ -6,14 +6,10 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme-provider";
 
 // Pages
-import Landing from "./pages/Landing";     // 👈 ADD THIS
-import Index from "./pages/Index";         // Chat page (will become dashboard later)
+import Landing from "./pages/Landing";
+import Index from "./pages/Index";        // Chat page (for now)
 import NotFound from "./pages/NotFound";
-// If you already created these, you can add them too:
-// import SignIn from "./pages/SignIn";
-// import SignUp from "./pages/SignUp";
-// import Subscribe from "./pages/Subscribe";
-// import Dashboard from "./pages/Dashboard";
+import SignUp from "./pages/SignUp";      // ✅ ADD THIS IMPORT
 
 const queryClient = new QueryClient();
 
@@ -25,20 +21,14 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-
-            {/* 👇 NEW: Landing page becomes the homepage */}
+            {/* Landing page is the homepage */}
             <Route path="/" element={<Landing />} />
 
-            {/* 👇 Move your chat app to its own route */}
-            <Route path="/chat" element={<Index />} />
-            {/* or /dashboard once you build it */}
+            {/* Signup page */}
+            <Route path="/signup" element={<SignUp />} />   {/* ✅ ADD THIS ROUTE */}
 
-            {/* Authentication + subscription (if created)
-            <Route path="/signin" element={<SignIn />} />
-            <Route path="/signup" element={<SignUp />} />
-            <Route path="/subscribe" element={<Subscribe />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            */}
+            {/* Dream chat (old main page) */}
+            <Route path="/chat" element={<Index />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
