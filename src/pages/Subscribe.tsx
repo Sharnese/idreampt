@@ -18,15 +18,16 @@ export default function Subscribe() {
 
     try {
       const { data, error } = await supabase.functions.invoke(
-        "create-checkout-session",
-        {
-          body: {
-            plan, // "trial" or "paid"
-            successUrl: `${window.location.origin}/chat`,
-            cancelUrl: `${window.location.origin}/subscribe?plan=${plan}`,
-          },
-        }
-      );
+  "create-checkout-session",
+  {
+    body: {
+      plan,
+      successUrl: `${window.location.origin}/dashboard`,   // ✅ go to Dashboard
+      cancelUrl: `${window.location.origin}/subscribe?plan=${plan}`,
+    },
+  }
+);
+
 
       if (error) throw error;
       if (!data?.url) throw new Error("No checkout url returned from server");
