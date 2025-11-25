@@ -10,9 +10,12 @@ export default function Subscribe() {
   const initialPlan = searchParams.get("plan") === "paid" ? "paid" : "trial";
   const [plan, setPlan] = useState<"trial" | "paid">(initialPlan);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleCheckout = async () => {
     setLoading(true);
+    setErrorMsg(null);
+
     try {
       const { data, error } = await supabase.functions.invoke(
         "create-checkout-session",
@@ -26,12 +29,12 @@ export default function Subscribe() {
       );
 
       if (error) throw error;
-      if (!data?.url) throw new Error("Missing checkout URL from server.");
+      if (!data?.url) throw new Error("No checkout url returned from server");
 
-      window.location.href = data.url; // send user to Stripe
-    } catch (err) {
+      window.location.href = data.url; // go to Stripe
+    } catch (err: any) {
       console.error("Checkout error:", err);
-      alert("There was a problem starting your checkout. Please try again.");
+      setErrorMsg(err?.message ?? "There was a problem starting checkout.");
     } finally {
       setLoading(false);
     }
@@ -46,14 +49,14 @@ export default function Subscribe() {
               Choose your iDreampt plan
             </h1>
             <p className="text-xs text-muted-foreground mt-1">
-              You can cancel anytime. Your card is processed securely by Stripe.
+              Payments are handled securely by Stripe. You can cancel anytime.
             </p>
           </div>
           <button
             className="text-xs text-lavender hover:underline"
             onClick={() => navigate("/")}
           >
-            ← Back to landing
+            ← Back
           </button>
         </div>
 
@@ -80,7 +83,7 @@ export default function Subscribe() {
             </p>
             <ul className="mt-3 text-xs text-lavender/90 space-y-1">
               <li>• Unlimited dream interpretations during trial</li>
-              <li>• Full history and saved results</li>
+              <li>• Dream history & saved results</li>
               <li>• Cancel anytime before trial ends</li>
             </ul>
           </button>
@@ -102,7 +105,7 @@ export default function Subscribe() {
             </p>
             <ul className="mt-3 text-xs text-lavender/90 space-y-1">
               <li>• Unlimited dream interpretations</li>
-              <li>• Priority processing & insights</li>
+              <li>• Full dream history</li>
               <li>• Pause or cancel anytime</li>
             </ul>
           </button>
@@ -120,9 +123,15 @@ export default function Subscribe() {
             : "Continue with $4.99/month →"}
         </Button>
 
+        {errorMsg && (
+          <p className="mt-3 text-xs text-red-400 text-center">
+            {errorMsg}
+          </p>
+        )}
+
         <p className="mt-3 text-[11px] text-muted-foreground text-center">
           By continuing, you agree to iDreampt’s Terms and Privacy Policy. You’ll
-          be redirected to Stripe to securely enter your payment details.
+          be redirected to Stripe to securely enter your card details.
         </p>
       </div>
     </div>
