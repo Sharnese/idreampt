@@ -1,4 +1,6 @@
 // src/pages/Dashboard.tsx
+import Index from "./Index"; // existing chat page
+
 import { useEffect, useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
@@ -228,21 +230,12 @@ export default function Dashboard() {
         )}
 
         {/* CONTENT TABS */}
-        {tab === "chat" && (
-          <section className="bg-black/20 border border-white/10 rounded-3xl p-4 md:p-6 min-h-[60vh]">
-            <h1 className="text-xl font-semibold mb-2">
-              🌙 Dream Chat
-            </h1>
-            <p className="text-xs text-lavender/80 mb-4">
-              This is where your AI dream conversation lives. You can later
-              embed your existing chat component from `/chat` here.
-            </p>
-            <div className="rounded-2xl border border-white/10 bg-black/40 h-[50vh] flex items-center justify-center text-xs text-lavender/70">
-              Dream chat UI goes here (we’ll swap in your existing /chat
-              component).
-            </div>
-          </section>
-        )}
+       {tab === "chat" && (
+  <div className="bg-black/20 border border-white/10 rounded-3xl p-2 md:p-3 min-h-[60vh] overflow-hidden">
+    <Index />
+  </div>
+)}
+
 
         {tab === "history" && (
           <section className="bg-black/20 border border-white/10 rounded-3xl p-4 md:p-6 min-h-[60vh]">
