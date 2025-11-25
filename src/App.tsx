@@ -26,7 +26,7 @@ const App = () => (
 
             {/* Signup page */}
             <Route path="/signup" element={<SignUp />} />   {/* ✅ ADD THIS ROUTE */}
-
+            <Route path="/subscribe" element={<Subscribe />} />
             {/* Dream chat (old main page) */}
             <Route path="/chat" element={<Index />} />
 
