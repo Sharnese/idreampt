@@ -6,8 +6,9 @@ import DreamInterpretation from './DreamInterpretation';
 import LoadingMessage from './LoadingMessage';
 import AdPlaceholder from './AdPlaceholder';
 import { interpretDream, type DreamAnalysis } from '../services/dreamInterpreter';
-import { supabase } from "@/lib/supabase";   // ✅ Needed for saving dreams
+import { supabase } from "@/lib/supabase";
 import { Moon, Stars } from 'lucide-react';
+import { useNavigate } from "react-router-dom";  // ✅ NEW
 
 type AppState = 'input' | 'loading' | 'ad' | 'result' | 'error';
 
@@ -16,10 +17,8 @@ const AppLayout: React.FC = () => {
   const [appState, setAppState] = useState<AppState>('input');
   const [error, setError] = useState<string | null>(null);
   const [dreamText, setDreamText] = useState('');
+  const navigate = useNavigate(); // ✅ NEW
 
-  // ===============================================================
-  // ✅ MAIN FUNCTION - handles interpretation + saves dream to Supabase
-  // ===============================================================
   const handleDreamSubmit = async (dreamText: string) => {
     setAppState('loading');
     setError(null);
@@ -27,7 +26,7 @@ const AppLayout: React.FC = () => {
     setDreamText(dreamText);
 
     try {
-      // 1️⃣ Get logged-in user (needed to save dream)
+      // 1️⃣ Get logged-in user
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData.user) {
         console.error("User not signed in – dream will not be saved.");
@@ -76,7 +75,6 @@ const AppLayout: React.FC = () => {
     }
   };
 
-  // Reset for new dream
   const handleStartNew = () => {
     setInterpretation(null);
     setError(null);
@@ -84,14 +82,19 @@ const AppLayout: React.FC = () => {
     setAppState('input');
   };
 
-  // ===============================================================
-  // UI Layout (unchanged)
-  // ===============================================================
   return (
     <div className="min-h-screen relative overflow-hidden">
       <StarryBackground />
       
       <div className="relative z-10 min-h-screen flex flex-col">
+        {/* 🔙 Back to Dashboard */}
+        <button
+          onClick={() => navigate("/dashboard")}
+          className="absolute top-4 left-4 z-20 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] bg-black/60 border border-white/20 text-purple-100 hover:bg-black/80 transition"
+        >
+          ← Back to Dashboard
+        </button>
+
         {/* Header */}
         <header className="text-center py-8 px-4">
           <div className="flex items-center justify-center gap-3 mb-4">
@@ -109,28 +112,21 @@ const AppLayout: React.FC = () => {
         {/* Main */}
         <main className="flex-1 px-4 pb-8">
           <div className="max-w-4xl mx-auto space-y-8">
-
-            {/* Dream Input */}
             <DreamInput 
               onSubmit={handleDreamSubmit} 
               isLoading={appState !== 'input'} 
               initialValue={dreamText} 
             />
 
-            {/* Loading */}
             {appState === 'loading' && <LoadingMessage />}
-
-            {/* Ad */}
             {appState === 'ad' && <AdPlaceholder />}
 
-            {/* Error */}
             {appState === 'error' && (
               <div className="text-center p-4 bg-red-900/20 border border-red-400/30 rounded-lg">
                 <p className="text-red-300">{error}</p>
               </div>
             )}
 
-            {/* Result */}
             {appState === 'result' && interpretation && (
               <DreamInterpretation 
                 analysis={interpretation} 
@@ -152,3 +148,4 @@ const AppLayout: React.FC = () => {
 };
 
 export default AppLayout;
+
