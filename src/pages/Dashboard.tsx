@@ -8,7 +8,14 @@ import { Label } from "@/components/ui/label";
 
 type Tab = "chat" | "history" | "profile";
 
-/** NEW: ensure there is a profile row for this user */
+type DreamRow = {
+  id: string;
+  dream_text: string;
+  interpretation: string | null;
+  created_at: string;
+};
+
+/** Ensure there is a profile row for this user */
 async function ensureProfile(userId: string, email?: string | null) {
   if (!userId) return;
 
@@ -30,16 +37,48 @@ async function ensureProfile(userId: string, email?: string | null) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("chat");
+
   const [loadingUser, setLoadingUser] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState("");
+
   const [profileSaving, setProfileSaving] = useState(false);
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [newPassword, setNewPassword] = useState("");
+
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Load current user + ensure profile + load profile display_name
+  // History state
+  const [dreams, setDreams] = useState<DreamRow[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const fetchDreamHistory = async (uid: string) => {
+    setHistoryLoading(true);
+    setHistoryError(null);
+
+    const { data, error } = await supabase
+      .from("dreams")
+      .select("id, dream_text, interpretation, created_at")
+      .eq("user_id", uid)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error loading dream history:", error);
+      setHistoryError("Could not load dream history.");
+      setDreams([]);
+    } else {
+      setDreams(data || []);
+    }
+
+    setHistoryLoading(false);
+  };
+
+  // Load current user + ensure profile + load profile + history
   useEffect(() => {
     const loadUser = async () => {
       const { data, error } = await supabase.auth.getUser();
@@ -50,11 +89,12 @@ export default function Dashboard() {
 
       const user = data.user;
       setUserEmail(user.email ?? null);
+      setUserId(user.id);
 
-      // Make sure a profiles row exists
+      // Ensure profile
       await ensureProfile(user.id, user.email);
 
-      // Load display_name from profiles table
+      // Load profile display_name
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("display_name")
@@ -68,6 +108,9 @@ export default function Dashboard() {
       } else {
         setDisplayName("");
       }
+
+      // Load dream history
+      await fetchDreamHistory(user.id);
 
       setLoadingUser(false);
     };
@@ -140,6 +183,67 @@ export default function Dashboard() {
     alert(
       "Deactivation flow goes here (e.g., flag account in your profiles table)."
     );
+  };
+
+  const handleCopyDream = async (dream: DreamRow) => {
+    const text = `Dream (${new Date(dream.created_at).toLocaleString()}):\n\n${dream.dream_text}\n\nInterpretation:\n${dream.interpretation ?? ""}`;
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        setSuccessMsg("Dream copied to clipboard.");
+      } else {
+        alert("Copy not supported in this browser.");
+      }
+    } catch (err) {
+      console.error("Copy failed:", err);
+      setErrorMsg("Could not copy dream.");
+    }
+  };
+
+  const handleShareDream = async (dream: DreamRow) => {
+    const text = `Dream (${new Date(dream.created_at).toLocaleString()}):\n\n${dream.dream_text}\n\nInterpretation:\n${dream.interpretation ?? ""}`;
+
+    // @ts-ignore
+    if (navigator.share) {
+      try {
+        // @ts-ignore
+        await navigator.share({
+          title: "My dream from iDreampt",
+          text,
+        });
+      } catch (err) {
+        if ((err as any)?.name !== "AbortError") {
+          console.error("Share failed:", err);
+          setErrorMsg("Could not share dream.");
+        }
+      }
+    } else {
+      // Fallback to copy
+      await handleCopyDream(dream);
+    }
+  };
+
+  const handleDeleteDream = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this dream?")) return;
+
+    setDeletingId(id);
+    setHistoryError(null);
+
+    try {
+      const { error } = await supabase.from("dreams").delete().eq("id", id);
+      if (error) throw error;
+
+      setDreams((prev) => prev.filter((d) => d.id !== id));
+      if (expandedId === id) {
+        setExpandedId(null);
+      }
+    } catch (err) {
+      console.error("Error deleting dream:", err);
+      setHistoryError("Could not delete dream.");
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   if (loadingUser) {
@@ -226,7 +330,7 @@ export default function Dashboard() {
 
       {/* Main content area */}
       <main className="flex-1 w-full max-w-5xl mx-auto px-3 md:px-6 pb-6">
-        {/* CHAT TAB – currently still linking to /chat */}
+        {/* CHAT TAB – still linking to /chat for now */}
         {tab === "chat" && (
           <section className="mt-3 rounded-2xl border border-white/10 bg-black/40 p-4 md:p-6">
             <h1 className="text-base md:text-lg font-semibold mb-2">
@@ -241,21 +345,137 @@ export default function Dashboard() {
           </section>
         )}
 
-        {/* HISTORY TAB – will hook to dreams table next */}
+        {/* HISTORY TAB – real data */}
         {tab === "history" && (
           <section className="mt-3 rounded-2xl border border-white/10 bg-black/40 p-4 md:p-6">
             <h1 className="text-base md:text-lg font-semibold mb-2">
               📜 Dream History & Results
             </h1>
-            <p className="text-[11px] md:text-xs text-lavender/80 mb-4">
-              Soon, every dream you interpret will be saved here with its
-              insight and themes. You’ll be able to scroll back through your
-              “night stories” and see patterns in your waking life.
-            </p>
-            <div className="rounded-2xl border border-dashed border-white/20 bg-black/30 min-h-[40vh] flex items-center justify-center text-xs text-lavender/70 text-center px-6">
-              No dream history yet. Once we store each dream in Supabase,
-              they’ll appear here with dates, summaries, and key symbols.
-            </div>
+
+            {historyError && (
+              <p className="text-xs text-red-300 mb-2">{historyError}</p>
+            )}
+
+            {historyLoading ? (
+              <p className="text-[11px] md:text-xs text-lavender/80">
+                Loading your dream history…
+              </p>
+            ) : dreams.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-white/20 bg-black/30 min-h-[40vh] flex items-center justify-center text-xs text-lavender/70 text-center px-6">
+                No dream history yet. Interpret a dream and it will show up
+                here with a date, your original text, and the AI’s
+                interpretation.
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+                {dreams.map((d) => {
+                  const created = new Date(d.created_at);
+                  const dreamPreview =
+                    d.dream_text.length > 160
+                      ? d.dream_text.slice(0, 160) + "…"
+                      : d.dream_text;
+
+                  const interpPreview =
+                    d.interpretation && d.interpretation.length > 180
+                      ? d.interpretation.slice(0, 180) + "…"
+                      : d.interpretation || "";
+
+                  const isExpanded = expandedId === d.id;
+
+                  return (
+                    <div
+                      key={d.id}
+                      className="rounded-xl border border-white/10 bg-black/50 p-3 text-xs md:text-sm"
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <div className="text-[10px] text-lavender/70">
+                          {created.toLocaleDateString()} •{" "}
+                          {created.toLocaleTimeString()}
+                        </div>
+                        <div className="flex gap-1 flex-wrap justify-end">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-[10px]"
+                            onClick={() =>
+                              setExpandedId(isExpanded ? null : d.id)
+                            }
+                          >
+                            {isExpanded ? "Collapse" : "Expand"}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-[10px]"
+                            onClick={() => handleCopyDream(d)}
+                          >
+                            Copy
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-[10px]"
+                            onClick={() => handleShareDream(d)}
+                          >
+                            Share
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-[10px] border-red-400 text-red-300 hover:bg-red-500/10"
+                            onClick={() => handleDeleteDream(d.id)}
+                            disabled={deletingId === d.id}
+                          >
+                            {deletingId === d.id ? "Deleting…" : "Delete"}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Content */}
+                      {!isExpanded ? (
+                        <div className="space-y-1">
+                          <div>
+                            <span className="font-semibold text-lavender/90">
+                              Dream:
+                            </span>{" "}
+                            {dreamPreview}
+                          </div>
+                          {interpPreview && (
+                            <div className="text-lavender/90">
+                              <span className="font-semibold">
+                                Interpretation:
+                              </span>{" "}
+                              {interpPreview}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-2 mt-1">
+                          <div>
+                            <span className="font-semibold text-lavender/90">
+                              Dream:
+                            </span>{" "}
+                            {d.dream_text}
+                          </div>
+                          {d.interpretation && (
+                            <div className="text-lavender/90">
+                              <span className="font-semibold">
+                                Interpretation:
+                              </span>{" "}
+                              {d.interpretation}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </section>
         )}
 
