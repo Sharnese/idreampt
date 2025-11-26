@@ -1,3 +1,4 @@
+// src/pages/AppLayout.tsx
 import React, { useState } from 'react';
 import StarryBackground from './StarryBackground';
 import DreamInput from './DreamInput';
@@ -5,8 +6,9 @@ import DreamInterpretation from './DreamInterpretation';
 import LoadingMessage from './LoadingMessage';
 import AdPlaceholder from './AdPlaceholder';
 import { interpretDream, type DreamAnalysis } from '../services/dreamInterpreter';
-
+import { supabase } from "@/lib/supabase";   // ✅ Needed for saving dreams
 import { Moon, Stars } from 'lucide-react';
+
 type AppState = 'input' | 'loading' | 'ad' | 'result' | 'error';
 
 const AppLayout: React.FC = () => {
@@ -15,6 +17,9 @@ const AppLayout: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [dreamText, setDreamText] = useState('');
 
+  // ===============================================================
+  // ✅ MAIN FUNCTION - handles interpretation + saves dream to Supabase
+  // ===============================================================
   const handleDreamSubmit = async (dreamText: string) => {
     setAppState('loading');
     setError(null);
@@ -22,28 +27,56 @@ const AppLayout: React.FC = () => {
     setDreamText(dreamText);
 
     try {
-      // Start interpretation in background
+      // 1️⃣ Get logged-in user (needed to save dream)
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) {
+        console.error("User not signed in – dream will not be saved.");
+      }
+      const user = userData?.user;
+
+      // 2️⃣ Start AI interpretation
       const interpretationPromise = interpretDream(dreamText);
-      
-      // Show ad for 10 seconds
+
+      // Show the ad after 1 second
       setTimeout(() => {
         setAppState('ad');
       }, 1000);
-      
-      // Wait for interpretation and show after ad period
+
+      // 3️⃣ Wait for the AI's interpretation
       const result = await interpretationPromise;
-      
+
+      // 4️⃣ Save the dream + interpretation to Supabase
+      if (user) {
+        const { error: insertError } = await supabase
+          .from("dreams")
+          .insert({
+            user_id: user.id,
+            dream_text: dreamText,
+            interpretation:
+              (result as any)?.fullText ||
+              (result as any)?.interpretation ||
+              JSON.stringify(result),
+          });
+
+        if (insertError) {
+          console.error("Error saving dream:", insertError);
+        }
+      }
+
+      // 5️⃣ After the 10-second ad, show result
       setTimeout(() => {
         setInterpretation(result);
         setAppState('result');
-      }, 10000); // 10 seconds for ad
-      
+      }, 10000);
+
     } catch (err) {
+      console.error(err);
       setError(err instanceof Error ? err.message : 'Failed to interpret dream');
       setAppState('error');
     }
   };
 
+  // Reset for new dream
   const handleStartNew = () => {
     setInterpretation(null);
     setError(null);
@@ -51,11 +84,15 @@ const AppLayout: React.FC = () => {
     setAppState('input');
   };
 
+  // ===============================================================
+  // UI Layout (unchanged)
+  // ===============================================================
   return (
     <div className="min-h-screen relative overflow-hidden">
       <StarryBackground />
       
       <div className="relative z-10 min-h-screen flex flex-col">
+        {/* Header */}
         <header className="text-center py-8 px-4">
           <div className="flex items-center justify-center gap-3 mb-4">
             <Moon className="w-8 h-8 text-yellow-300" />
@@ -69,26 +106,41 @@ const AppLayout: React.FC = () => {
           </p>
         </header>
 
+        {/* Main */}
         <main className="flex-1 px-4 pb-8">
           <div className="max-w-4xl mx-auto space-y-8">
-            <DreamInput onSubmit={handleDreamSubmit} isLoading={appState !== 'input'} initialValue={dreamText} />
-            
+
+            {/* Dream Input */}
+            <DreamInput 
+              onSubmit={handleDreamSubmit} 
+              isLoading={appState !== 'input'} 
+              initialValue={dreamText} 
+            />
+
+            {/* Loading */}
             {appState === 'loading' && <LoadingMessage />}
-            
+
+            {/* Ad */}
             {appState === 'ad' && <AdPlaceholder />}
-            
+
+            {/* Error */}
             {appState === 'error' && (
               <div className="text-center p-4 bg-red-900/20 border border-red-400/30 rounded-lg">
                 <p className="text-red-300">{error}</p>
               </div>
             )}
-            
+
+            {/* Result */}
             {appState === 'result' && interpretation && (
-              <DreamInterpretation analysis={interpretation} onStartNew={handleStartNew} />
+              <DreamInterpretation 
+                analysis={interpretation} 
+                onStartNew={handleStartNew} 
+              />
             )}
           </div>
         </main>
 
+        {/* Footer */}
         <footer className="text-center py-6 px-4">
           <p className="text-purple-300/60 text-sm">
             Powered by OpenAI • Your dreams hold the keys to understanding yourself
