@@ -179,11 +179,51 @@ export default function Dashboard() {
     }
   };
 
-  const handleDeactivate = () => {
-    alert(
-      "Deactivation flow goes here (e.g., flag account in your profiles table)."
-    );
-  };
+ const handleDeactivate = async () => {
+  const confirmDeactivate = window.confirm(
+    "Are you sure you want to deactivate your account? This will log you out."
+  );
+  if (!confirmDeactivate) return;
+
+  setErrorMsg(null);
+  setSuccessMsg(null);
+
+  try {
+    // Get current user
+    const { data, error: userError } = await supabase.auth.getUser();
+    if (userError || !data.user) {
+      throw new Error("You must be logged in to deactivate your account.");
+    }
+
+    const user = data.user;
+
+    // Mark profile as inactive
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({
+        is_active: false,
+        deactivated_at: new Date().toISOString(),
+      })
+      .eq("id", user.id);
+
+    if (profileError) {
+      console.error("Error deactivating profile:", profileError);
+      throw new Error("Could not deactivate your profile.");
+    }
+
+    // Optional: show a quick success message before redirect
+    setSuccessMsg("Your account has been deactivated.");
+
+    // Sign them out + send to landing/home
+    await supabase.auth.signOut();
+    navigate("/"); // or "/signin" if you prefer
+
+  } catch (err: any) {
+    console.error("Deactivation error:", err);
+    setErrorMsg(err?.message ?? "Something went wrong deactivating account.");
+  }
+};
+
 
   const handleCopyDream = async (dream: DreamRow) => {
     const text = `Dream (${new Date(dream.created_at).toLocaleString()}):\n\n${dream.dream_text}\n\nInterpretation:\n${dream.interpretation ?? ""}`;
