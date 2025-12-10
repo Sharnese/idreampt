@@ -57,6 +57,9 @@ export default function Dashboard() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  // Deactivate state
+  const [deactivating, setDeactivating] = useState(false);
+
   const fetchDreamHistory = async (uid: string) => {
     setHistoryLoading(true);
     setHistoryError(null);
@@ -179,51 +182,64 @@ export default function Dashboard() {
     }
   };
 
- const handleDeactivate = async () => {
-  const confirmDeactivate = window.confirm(
-    "Are you sure you want to deactivate your account? This will log you out."
-  );
-  if (!confirmDeactivate) return;
+  // Deactivate + cancel subscription
+  const handleDeactivate = async () => {
+    const confirmDeactivate = window.confirm(
+      "Are you sure you want to deactivate your account? This will cancel your subscription and log you out."
+    );
+    if (!confirmDeactivate) return;
 
-  setErrorMsg(null);
-  setSuccessMsg(null);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    setDeactivating(true);
 
-  try {
-    // Get current user
-    const { data, error: userError } = await supabase.auth.getUser();
-    if (userError || !data.user) {
-      throw new Error("You must be logged in to deactivate your account.");
+    try {
+      // Get current user
+      const { data, error: userError } = await supabase.auth.getUser();
+      if (userError || !data.user) {
+        throw new Error("You must be logged in to deactivate your account.");
+      }
+
+      const user = data.user;
+
+      // 1) Cancel subscription via Edge Function (safe even if no sub)
+      const { data: cancelData, error: cancelError } =
+        await supabase.functions.invoke("cancel-subscription");
+
+      if (cancelError) {
+        console.error("Cancel subscription error:", cancelError);
+        throw new Error("Could not cancel your subscription.");
+      }
+      if (cancelData?.error) {
+        console.error("Cancel subscription error:", cancelData.error);
+        throw new Error("Could not cancel your subscription.");
+      }
+
+      // 2) Mark profile as inactive
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({
+          is_active: false,
+          deactivated_at: new Date().toISOString(),
+        })
+        .eq("id", user.id);
+
+      if (profileError) {
+        console.error("Error deactivating profile:", profileError);
+        throw new Error("Could not deactivate your profile.");
+      }
+
+      // 3) Success + sign them out
+      setSuccessMsg("Your subscription is canceled and your account is deactivated.");
+      await supabase.auth.signOut();
+      navigate("/"); // or "/signin"
+    } catch (err: any) {
+      console.error("Deactivation error:", err);
+      setErrorMsg(err?.message ?? "Something went wrong deactivating account.");
+    } finally {
+      setDeactivating(false);
     }
-
-    const user = data.user;
-
-    // Mark profile as inactive
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .update({
-        is_active: false,
-        deactivated_at: new Date().toISOString(),
-      })
-      .eq("id", user.id);
-
-    if (profileError) {
-      console.error("Error deactivating profile:", profileError);
-      throw new Error("Could not deactivate your profile.");
-    }
-
-    // Optional: show a quick success message before redirect
-    setSuccessMsg("Your account has been deactivated.");
-
-    // Sign them out + send to landing/home
-    await supabase.auth.signOut();
-    navigate("/"); // or "/signin" if you prefer
-
-  } catch (err: any) {
-    console.error("Deactivation error:", err);
-    setErrorMsg(err?.message ?? "Something went wrong deactivating account.");
-  }
-};
-
+  };
 
   const handleCopyDream = async (dream: DreamRow) => {
     const text = `Dream (${new Date(dream.created_at).toLocaleString()}):\n\n${dream.dream_text}\n\nInterpretation:\n${dream.interpretation ?? ""}`;
@@ -592,9 +608,9 @@ export default function Dashboard() {
                   Deactivate account
                 </h2>
                 <p className="text-[11px] text-lavender/80 mb-3">
-                  This will log you out and mark your account as inactive.
-                  Later we can wire this to actually disable your
-                  subscription/user.
+                  This will cancel your subscription, mark your account as
+                  inactive, and log you out. You can reactivate later by
+                  signing back in and subscribing again.
                 </p>
                 <Button
                   variant="outline"
@@ -602,8 +618,9 @@ export default function Dashboard() {
                   className="border-red-500/70 text-red-300 hover:bg-red-500/10"
                   type="button"
                   onClick={handleDeactivate}
+                  disabled={deactivating}
                 >
-                  Deactivate account
+                  {deactivating ? "Deactivating…" : "Deactivate account"}
                 </Button>
               </div>
             </div>
